@@ -3,5 +3,6 @@ class Student:
         self.name = name
         self.email = email
         self.academy = academy
-        self.exams=exams
+        self.exams = exams
+        
     

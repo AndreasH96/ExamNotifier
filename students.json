@@ -1,0 +1,13 @@
+[
+    {
+        "name": "Andreas",
+        "email": "@gmail.com",
+        "academy": "ITE",
+        "exams": [
+            {
+                "CourseCode": "DT4012",
+                "Notified": false
+            }
+        ]
+    }
+]
