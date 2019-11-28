@@ -19,14 +19,14 @@ class ExamScraper:
             for academy in self.academys:
                 
                 if (academy in caption.get_text() and academy != "ETN"):
-                    print(academy)
-                    print(caption.get_text())
+                    #print(academy)
+                    #print(caption.get_text())
                     examTableHTML = caption.find_parent('table', attrs={'class':'sv-responsiveTable sv-responsiveTable--stacked sv-responsiveTable--stackTable c6'})
                     examTableRowsHTML[academy] = examTableHTML.find_all('tr')
                 
                 elif (academy is "ETN" and examTableRowsHTML["ETN"] == None):
-                    print(academy)
-                    print(caption.get_text())
+                    #print(academy)
+                    #print(caption.get_text())
                     examTableHTML = self.soup.find('table', attrs={'class':'sv-responsiveTable sv-responsiveTable--stacked sv-responsiveTable--stackTable c6'})
                     examTableRowsHTML[academy] = examTableHTML.find_all('tr')
                 
@@ -38,9 +38,9 @@ class ExamScraper:
                 if row:
                     exams[academy].append(row)
             self.examDataFrame[academy] = pd.DataFrame(exams[academy], columns=["Date", "Course_Code", "Title", "Examinator"])
-
-        for academy in self.academys:
-            print("Academy {} \n {}".format(academy, self.examDataFrame.get(academy)))
+    
+    #for academy in self.academys:
+    #    print("Academy {} \n {}".format(academy, self.examDataFrame.get(academy)))
 
     def getExamDataFrame(self):
         return self.examDataFrame
