@@ -6,3 +6,5 @@ state.csv
 jupyter/
 *.ipynb
 core.*
+emailCredentials.json
+token.pickle
