@@ -1,2 +1,8 @@
 credentials.json
 __pycache__
+data/
+state.csv
+.ipynb_checkpoints
+jupyter/
+*.ipynb
+core.*
