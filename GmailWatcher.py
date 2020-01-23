@@ -9,7 +9,6 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-# If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.modify']
 REMOVEUNREADLABEL = {'removeLabelIds': ['UNREAD'], 'addLabelIds': []}
 HHSTUDENTMAILDOMAIN = "student.hh.se"
@@ -188,19 +187,33 @@ class GmailWatcher():
             Appends the notification to the data storage.
 
             Input: Email data extracted by extractEmailData()
+
+            TODO: implement the appending of notification
         """
         pass
 
     def studentStatus(self,senderNameAndEmail):
+        """
+            TODO: implement sending the student the status
+        """
         print("STATUS")
 
     def deleteStudent(self,senderNameAndEmail):
+        """
+            TODO: implement deleting student from data set
+        """
         print("DELETE")
 
     def notStudent(self, senderNameAndEmail):
+        """
+            TODO: implement responding to student if we want to do that
+        """
         print("NOT STUDENT")
 
     def incorrectMail(self, senderNameAndEmail):
+        """
+            TODO: implement responding(?) to the student
+        """
         print("INCORRECT MAIL")
 gmailWatcher = GmailWatcher(markAsRead=False)
 
