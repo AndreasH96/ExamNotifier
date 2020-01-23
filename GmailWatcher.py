@@ -9,13 +9,15 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-# If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.modify']
 REMOVEUNREADLABEL = {'removeLabelIds': ['UNREAD'], 'addLabelIds': []}
 HHSTUDENTMAILDOMAIN = "student.hh.se"
 
 class GmailWatcher():
-    def __init__(self):
+    def __init__(self,markAsRead = False):
+        self.markAsRead = markAsRead
+        # used to keep users from spamming the bot
+        self.bannedUsers = []
         self.authorizeToGMailAPI()
         self.readInbox()
 
@@ -50,10 +52,10 @@ class GmailWatcher():
 
     def readInbox(self):
         """
-            Reads the gmail inbox of the bot and transmitts the data to a data file
+            Reads the gmail inbox of the bot, then forwards the extracted data to the correct method
         """
         # Call the Gmail API, fetching the ids of unread emails from the inbox
-        response = self.service.users().messages().list(userId='me',q='to:exampickup@gmail.com is:unread').execute()
+        response = self.service.users().messages().list(userId='me',q='to:exampickup@gmail.com').execute()
         unreadEmails = []
 
         # Append all unread emails to unreadEmails
@@ -64,14 +66,32 @@ class GmailWatcher():
             # Calling the Gmail API to fetch the data of the specific email
             receivedEmail = self.service.users().messages().get(userId ='me', id=email["id"] ,format ="full").execute()
 
-            emailData = self.extractEmailData(receivedEmail)
+            # Extract the wanted action and data of the email
+            status, emailData = self.extractEmailData(receivedEmail)
 
-            #if emailData != None:
-                # Call the Gmail API to mark the message as read
-                #self.service.users().messages().modify(userId='me', id=email["id"], body = REMOVEUNREADLABEL).execute()
             
-            if emailData == "NOT STUDENT":
-                print("not student")
+            # Call the Gmail API to mark the message as read if 
+            # the mail was successfully fetched and the markAsRead flag is set
+            if emailData != None and self.markAsRead:
+                self.service.users().messages().modify(userId='me', id=email["id"], body = REMOVEUNREADLABEL).execute()
+            
+
+            # Perform the desired action, show by the status parameter
+            if status == "NOT STUDENT":
+                self.notStudent(emailData)
+
+            elif status == "STATUS":
+                self.studentStatus(emailData)
+
+            elif status == "DELETE":
+                self.deleteStudent(emailData)
+
+            elif status == "NO COURSECODES":
+                self.incorrectMail(emailData)
+
+            elif status == "NORMAL":
+                print(emailData)
+                self.appendNotification(emailData)
 
     def extractEmailData(self,receivedEmail):
         """
@@ -93,21 +113,37 @@ class GmailWatcher():
             If the sender is not a student at Halmstad university, the method will return "NOT STUDENT".
         """
 
-        # Extract the raw sender information from the email headers
-        senderHeader = receivedEmail["payload"]["headers"][17]["value"]
+        # Extract the raw sender information from the correct email header
+        emailHeaders = receivedEmail["payload"]["headers"]
+        for header in emailHeaders:
+            if header["name"] == "From":
+                senderHeader = header["value"]
 
         # Use regex to find the name and email of the student
-        senderName = re.findall(r'"(.+?)"', senderHeader)[0]
-        senderEmail = re.findall(r'<(.+?)>',senderHeader)[0]
-        
-        senderEmailDomain = re.findall(r'[^@]*$',senderEmail)[0]
-        
+        try:
+            # If person has åäö in name, they will have quotations around their name
+            # Therefore needs more advanced regex
+            senderName = re.findall(r'(\w(.+?))((?="\s<)|(?=\s<))', senderHeader)[0][0]
+            #senderName = re.findall(r'"(.+?)"', senderHeader)[0]
+        except:
+            senderName = "Error"
+        try:
+            senderEmail = re.findall(r'<(.+?)>',senderHeader)[0]
+        except:
+            senderEmail = "Error"
+        try:
+            senderEmailDomain = re.findall(r'[^@]*$',senderEmail)[0]
+        except:
+            senderEmailDomain = "Error"
         
         # Checks so that the person who sends an email is a student at Halmstad University
         # If not student, return error message
         if senderEmailDomain != HHSTUDENTMAILDOMAIN:
-            return "NOT STUDENT"
+            return "NOT STUDENT", {"name":senderName, "email": senderEmail}
 
+        # Check if user is banned from the service
+        elif senderEmailDomain in self.bannedUsers:
+            return "BANNED USER", {"name":senderName, "email": senderEmail}
         
         # Get current date and time to store when email was recieved
         todaysTime = datetime.today()
@@ -121,11 +157,11 @@ class GmailWatcher():
       
         # Check if the student wishes to recieve a status
         if emailContent[0].lower() == "status":
-            return "STATUS"
+            return "STATUS", {"name":senderName, "email": senderEmail}
 
         # Check if the student wishes to be deleted from the database
         elif emailContent[0].lower() == "delete":
-            return "DELETE"
+            return "DELETE", {"name":senderName, "email": senderEmail}
         
         emailData = []
 
@@ -137,24 +173,48 @@ class GmailWatcher():
 
             if len(re.findall(r"\D{2}\d{4}", courseCode)) != 0:
                 
-                emailDataLine = {"name":senderName, "email":senderEmail,"code":courseCode,
+                emailDataLine = {"name":senderName, "email":senderEmail,"code":courseCode.upper(),
                             "registrationMail":False,"collectMail":False,"mailTime":timeRecieved}
 
                 emailData.append(emailDataLine)
-        
-        return emailData
 
-        
+            if len(emailData) == 0:
+                return "NO COURSECODES",{"name":senderName, "email": senderEmail}
+        return "NORMAL", emailData
 
+    def appendNotification(self, emailData):
+        """
+            Appends the notification to the data storage.
 
+            Input: Email data extracted by extractEmailData()
 
-    def studentStatus(self,senderEmail):
+            TODO: implement the appending of notification
+        """
         pass
 
-    def deleteStudent(self,senderEmail):
-        pass
-            
+    def studentStatus(self,senderNameAndEmail):
+        """
+            TODO: implement sending the student the status
+        """
+        print("STATUS")
 
-gmailWatcher = GmailWatcher()
+    def deleteStudent(self,senderNameAndEmail):
+        """
+            TODO: implement deleting student from data set
+        """
+        print("DELETE")
+
+    def notStudent(self, senderNameAndEmail):
+        """
+            TODO: implement responding to student if we want to do that
+        """
+        print("NOT STUDENT")
+
+    def incorrectMail(self, senderNameAndEmail):
+        """
+            TODO: implement responding(?) to the student
+        """
+        print("INCORRECT MAIL")
+gmailWatcher = GmailWatcher(markAsRead=False)
 
 
