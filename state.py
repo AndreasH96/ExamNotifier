@@ -7,9 +7,10 @@ def get_state_df():
     Columns: name,email,code,registrationMail,collectMail
     """
 
-    state_df = pd.read_csv("state.csv")
-    state_df.mailTime = pd.to_datetime(state_df.mailTime)
+    state_df = pd.read_csv("state.csv", parse_dates=["mailTime", "examWriteDate"])
     return state_df
 
+
 def write_state_df(df):
-    df.to_csv('state.csv')
+    df.to_csv("state.csv")
+
