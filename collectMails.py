@@ -2,6 +2,7 @@ from Dataframes import collect_df
 from state import get_state_df
 import pandas as pd
 
+
 # this script should be run periodically.
 
 

@@ -109,9 +109,11 @@ def timeedit_df():
     df["Vecka"] = df.Startdatum.dt.week
     df.rename(columns={"Vecka": "Tentavecka", "Startdatum": "Tentadatum"}, inplace=True)
     df.drop_duplicates(inplace=True)
+    """
     df = df[
         ["Kurskod", "Tentavecka", "Tentadatum", "Lokal", "Undervisningstyp", "Status"]
     ]
+    """
     return df
 
 
