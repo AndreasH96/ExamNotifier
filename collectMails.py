@@ -9,7 +9,7 @@ import pandas as pd
 def collectMails():
     """
     Returns a dataframe with everything ready to just mail it away.
-    Columns: code, name, email, mailTime, registrationMail, collectMail, Tentadatum, Kurskod, Kursnamn, Lärare, Typ, closeness, Body
+    Columns: courseCode, name, email, mailTime, registrationMail, collectMail, examWriteDate, courseCode, courseName, teacher, examType, closeness, Body
     """
 
     coll_df = collect_df()
@@ -17,17 +17,17 @@ def collectMails():
 
     # keep rows that have not already been sent
     df = state_df[~state_df.registrationMail]
-    df = df.merge(coll_df, left_on="code", right_on="Kurskod", how="inner")
-    df["code"] = df.Kurskod
-    df["closeness"] = df.Tentadatum - df.mailTime
+    df = df.merge(coll_df, left_on="courseCode", right_on="courseCode", how="inner")
+    df["courseCode"] = df.courseCode
+    df["closeness"] = df.examWriteDate - df.mailTime
     df.sort_values("closeness", ascending=False, inplace=True)
-    df = df.groupby(["code", "name"], as_index=False).first()
+    df = df.groupby(["courseCode", "name"], as_index=False).first()
 
     def generateMsg(row):
         """Called by df.apply on each row.
         You can swap out this part to a HTML-generating thingie
         """
-        return f"Hi {row['name'].split(' ')[0]}! You can collect your {row.Typ} in {row.code} ({row.Kursnamn[0]}) from {row.Tentadatum.date()} now."
+        return f"Hi {row['name'].split(' ')[0]}! You can collect your {row.examType} in {row.courseCode} ({row.courseName[0]}) from {row.examWriteDate.date()} now."
 
     df["Body"] = df.apply(generateMsg, axis=1)
 

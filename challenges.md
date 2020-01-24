@@ -3,7 +3,7 @@
 Thing|Date
 --------|----
 ExamDate|2020-01-14
-Course Code|MA2047
+Course courseCode|MA2047
 MailTime|2020-01-15
 Entry appears on HH|2020-01-31
 
@@ -14,7 +14,7 @@ We want to prevent incorrect CollectMails being sent due to earlier runs of the 
 Thing|Date
 -----|----
 ExamDate|2019-01-14
-Course Code|MA2047
+Course courseCode|MA2047
 MailTime|2020-01-15
 Entry appears on HH|Unknown
 

@@ -6,6 +6,9 @@ import smtplib
 import imaplib
 import ssl
 import time
+import json
+
+from state import get_state_df, set_state_df
 
 # template wraps a body string in HTML
 with open("mail_template.html") as f:
@@ -16,8 +19,18 @@ def render_mail(body):
     return Template(template_str).safe_substitute(body=body)
 
 
+with open("credentials.json") as credentials:
+    credentials = json.load(credentials)
+
+
 class Mail:
     def __init__(self, email, body):
+        """
+        Class to hold email information.
+        Email: Address to the recipident of the mail
+        Body: Plain text body of the mail
+        """
+
         self.email = email
         self.body = body
         self.html = render_mail(body)
@@ -26,37 +39,41 @@ class Mail:
         """
         Sends this email to the intended recipident.
         """
-        sender_email = "examnotifier@gmail.com"
-        receiver_email = self.email
-        password = "tjenis"  # andreas, fixa det här
 
-        message = MIMEMultipart("alternative")
-        message["Subject"] = "multipart test"
-        message["From"] = sender_email
-        message["To"] = receiver_email
+        try:
+            sender_email = credentials["Email"]
+            receiver_email = email
+            password = self.credentials["Password"]
 
-        text = self.body
-        html = self.html
+            message = MIMEMultipart("alternative")
+            message["Subject"] = "multipart test"
+            message["From"] = sender_email
+            message["To"] = receiver_email
 
-        part1 = MIMEText(text, "plain")
-        part2 = MIMEText(html, "html")
+            text = self.body
+            html = self.html
 
-        message.attach(part1)
-        message.attach(part2)
+            part1 = MIMEText(text, "plain")
+            part2 = MIMEText(html, "html")
 
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(sender_email, password)
-            server.sendmail(sender_email, receiver_email, message.as_string())
+            message.attach(part1)
+            message.attach(part2)
 
-        # also copy that email to Sent
-        imap = imaplib.IMAP4_SSL("imap.google.com", 993)
-        imap.login(sender_email, password)
-        imap.append(
-            "INBOX.Sent",
-            "\\Seen",
-            imaplib.Time2Internaldate(time.time()),
-            message.as_string().encode("utf8"),
-        )
-        imap.logout()
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+                server.login(sender_email, password)
+                server.sendmail(sender_email, receiver_email, message.as_string())
 
+            # also copy that email to Sent
+            imap = imaplib.IMAP4_SSL("imap.google.com", 993)
+            imap.login(sender_email, password)
+            imap.append(
+                "INBOX.Sent",
+                "\\Seen",
+                imaplib.Time2Internaldate(time.time()),
+                message.as_string().encode("utf8"),
+            )
+            imap.logout()
+
+        except Exception as e:
+            print(e)

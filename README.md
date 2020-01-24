@@ -6,7 +6,7 @@ A hobby project in Python using Beautiful Soup 4 and Pandas which notifies you w
 
 ## Signing Up
 
-A student should be able to sign up by sending an email to `ExamNotifier@gmail.com`, formatted with one course-code per line. Like this:
+A student should be able to sign up by sending an email to `ExamNotifier@gmail.com`, formatted with one course-courseCode per line. Like this:
 
 ```
 MA8080
@@ -42,7 +42,7 @@ The "State" is a file `state.csv` that holds some state for emails. We don't wan
 
 The structure should be a little bit like this.
 
-name              |email                 |code  |registrationMail|collectMail
+name              |email                 |courseCode  |registrationMail|collectMail
 ------------------|----------------------|------|----------------|-----------
 Jakob Lindskog    |jaklin16@student.hh.se|MA2020|False           |False
 Jakob Lindskog    |jaklin16@student.hh.se|FÖ1002|True            |False

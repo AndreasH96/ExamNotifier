@@ -31,7 +31,7 @@ class GmailWatcher:
     def authorizeToGMailAPI(self):
         """
             Authorizes to the Gmail API, updating self.service
-            Copied from Gmail tutorial code
+            Copied from Gmail tutorial courseCode
         """
         creds = None
         # The file token.pickle stores the user's access and refresh tokens, and is
@@ -120,7 +120,7 @@ class GmailWatcher:
             Returns: List of dictionaries with the following content
                 * Student name
                 * Student Email
-                * Course code
+                * Course courseCode
                 * Flag for if sent exam registration mail to the student
                 * Flag for if sent exam pickup mail to the student
                 * Date of receiving the email from the student
@@ -186,8 +186,8 @@ class GmailWatcher:
 
         def calcExamWriteDate(mailTime, courseCode):
             # take the date of the exam that is closest in time
-            time_df["diff"] = abs(mailTime - time_df[time_df.Kurskod == courseCode].Tentadatum)
-            tmp = time_df.sort_values("diff", ascending=True).Tentadatum.reset_index(
+            time_df["diff"] = abs(mailTime - time_df[time_df.courseCode == courseCode].examWriteDate)
+            tmp = time_df.sort_values("diff", ascending=True).examWriteDate.reset_index(
                 drop=True
             )
             time_df.drop("diff", axis=1, inplace=True)
@@ -206,13 +206,13 @@ class GmailWatcher:
             if len(re.findall(r"\D{2}\d{4}", courseCode)) != 0:
                 examWriteDate = calcExamWriteDate(timeReceived, courseCode)
                 if not examWriteDate:
-                    print('ERR: Course code "{}" not found'.format(courseCode))
+                    print('ERR: Course courseCode "{}" not found'.format(courseCode))
                     continue
 
                 emailDataLine = {
                     "name": senderName,
                     "email": senderEmail,
-                    "code": courseCode.upper(),
+                    "courseCode": courseCode.upper(),
                     "registrationMail": False,
                     "collectMail": False,
                     "mailTime": timeRecieved,
