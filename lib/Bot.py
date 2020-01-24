@@ -1,5 +1,5 @@
-from state import get_state_df, set_state_df
-from Mail import Mail
+from lib.state import get_state_df, set_state_df
+from lib.Mail import Mail
 
 
 class Bot:

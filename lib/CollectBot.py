@@ -1,5 +1,5 @@
-from Dataframes import collect_df
-from Bot import Bot
+from lib.Dataframes import collect_df
+from lib.Bot import Bot
 
 
 class CollectBot(Bot):

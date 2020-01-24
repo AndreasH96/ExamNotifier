@@ -8,10 +8,12 @@ import ssl
 import time
 import json
 
-from state import get_state_df, set_state_df
+from lib.state import get_state_df, set_state_df
+import os
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 # template wraps a body string in HTML
-with open("mail_template.html") as f:
+with open(dir_path + "/mail_template.html") as f:
     template_str = f.read()
 
 
@@ -19,7 +21,7 @@ def render_mail(body):
     return Template(template_str).safe_substitute(body=body)
 
 
-with open("credentials.json") as credentials:
+with open(dir_path + "/credentials.json") as credentials:
     credentials = json.load(credentials)
 
 

@@ -18,7 +18,7 @@ def collect_df():
     Columns: examWriteDate, courseCode, courseName, teacher, examType
     """
 
-    with open(dir_path + "/data/collect.html") as f:
+    with open(dir_path + "/../data/collect.html") as f:
         html = f.read()
 
     bs = BeautifulSoup(html, features="lxml")
@@ -54,7 +54,7 @@ def signup_df():
     """
     Returns a dataframe with info about when you can sign up for exams.
     """
-    with open(dir_path + "/data/tentor.html") as f:
+    with open(dir_path + "/../data/tentor.html") as f:
         data = f.read()
 
     bs = BeautifulSoup(data, features="lxml")
@@ -92,7 +92,7 @@ def timeedit_df():
     """
     Returns a dataframe with info about current exams running.
     """
-    df = pd.read_csv(dir_path + "/data/timeedit.csv", skiprows=3)
+    df = pd.read_csv(dir_path + "/../data/timeedit.csv", skiprows=3)
     df.rename(
         columns={
             "Startdatum": "examWriteDate",

@@ -1,5 +1,5 @@
-from Dataframes import openForRegistration_df
-from Bot import Bot
+from lib.Dataframes import openForRegistration_df
+from lib.Bot import Bot
 from datetime import datetime, timedelta
 
 
