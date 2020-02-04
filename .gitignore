@@ -11,3 +11,5 @@ core.*
 emailCredentials.json
 token.pickle
 .vscode
+allowedUsers.csv
+owners.csv

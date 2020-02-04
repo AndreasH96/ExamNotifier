@@ -4,12 +4,14 @@ import email
 import base64
 import os.path
 import re
+import csv
 from datetime import date, datetime
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-
-from Dataframes import timeedit_df
+from lib.Dataframes import timeedit_df
+import pandas as pd
+#from Dataframes import timeedit_df
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -23,8 +25,9 @@ HHSTUDENTMAILDOMAIN = "student.hh.se"
 class GmailWatcher:
     def __init__(self, markAsRead=False):
         self.markAsRead = markAsRead
-        # used to keep users from spamming the bot
-        self.bannedUsers = []
+        
+        self.allowedUsersEmailsPD = pd.read_csv("allowedUsers.csv")
+        self.ownersUserId = (pd.read_csv("owners.csv")).userid.to_list()
         self.authorizeToGMailAPI()
         self.readInbox()
 
@@ -159,14 +162,14 @@ class GmailWatcher:
             return "NOT STUDENT", {"name": senderName, "email": senderEmail}
 
         # Check if user is banned from the service
-        elif senderEmailDomain in self.bannedUsers:
-            return "BANNED USER", {"name": senderName, "email": senderEmail}
+        #elif senderEmailDomain in self.bannedUsers:
+        #    return "BANNED USER", {"name": senderName, "email": senderEmail}
 
         # Get current date and time to store when email was recieved
         todaysTime = datetime.today()
-        timeRecieved = "{} {}:{}".format(
+        timeReceived = pd.to_datetime("{} {}:{}".format(
             todaysTime.date(), todaysTime.hour, todaysTime.minute
-        )
+        ))
 
         # Only need the first rows, can therefore use ["snippet"] instead of getting the whole message
         # Snippet will have the content separated by spaces
@@ -215,7 +218,7 @@ class GmailWatcher:
                     "courseCode": courseCode.upper(),
                     "registrationMail": False,
                     "collectMail": False,
-                    "mailTime": timeRecieved,
+                    "mailTime": timeReceived,
                     "examWriteDate": examWriteDate
                 }
 
@@ -225,6 +228,35 @@ class GmailWatcher:
                 return "NO COURSECODES", {"name": senderName, "email": senderEmail}
 
         return "NORMAL", emailData
+
+    def appendPersonsToAllowedList(self,newUsers):
+        """
+            Appends the list of users to allowedUsers.csv
+
+            Input: List of user emails to allow
+
+        """
+        for newuser in newUsers:
+            if not (self.allowedUsersEmailsPD.isin([newuser]).any()).to_list()[0]:
+                self.allowedUsersEmailsPD = self.allowedUsersEmailsPD.append({"email":newuser}, ignore_index=True)
+
+        self.allowedUsersEmailsPD.to_csv("allowedUsers.csv", index=False)
+
+    def removePersonsFromAllowedList(self, userEmailList):
+        """
+            Removes the users in the list from allowedUsers.csv
+
+            Input: List of user emails to remove
+        """
+        for userEmail in userEmailList:
+            if userEmail[:8] not in self.ownersUserId:
+                # Get index of user
+                index = self.allowedUsersEmailsPD.index[self.allowedUsersEmailsPD.email == userEmail].tolist()[0]
+                
+                # Remove user if in allowed users
+                if index != None:
+                    self.allowedUsersEmailsPD = self.allowedUsersEmailsPD.drop([index])
+        self.allowedUsersEmailsPD.to_csv("allowedUsers.csv", index=False)
 
     def appendNotification(self, emailData):
         """

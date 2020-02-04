@@ -47,3 +47,7 @@ That is, we calculate the examWriteDate based on the distance to the nearest exa
 
 1. The `firstRegistrationMail` column is `false`
 2. The `courseCode` and `examWriteDate` columns are in the HH dataset.
+
+
+## Optional TODO:
+* Add so that a user can have the exams/commands in the subject of the email instead, or that the subject is the command that the user wishes to perform
