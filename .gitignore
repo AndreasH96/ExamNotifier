@@ -13,3 +13,4 @@ token.pickle
 .vscode
 allowedUsers.csv
 owners.csv
+pubsub.json

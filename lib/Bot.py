@@ -13,7 +13,7 @@ class Bot:
     getBody is an abstract method.
     """
 
-    def __init__(self, df, booleanColumn):
+    def __init__(self, df , booleanColumn):
         """
         df should be a dataframe from either collect_df or signup_df.
         """
