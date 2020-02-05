@@ -42,10 +42,10 @@ The "State" is a file `state.csv` that holds some state for emails. We don't wan
 
 The structure should be a little bit like this.
 
-name              |email                 |courseCode  |registrationMail|collectMail
-------------------|----------------------|------|----------------|-----------
-Jakob Lindskog    |jaklin16@student.hh.se|MA2020|False           |False
-Jakob Lindskog    |jaklin16@student.hh.se|FÖ1002|True            |False
-Andreas Häggström |andhag16@student.hh.se|MA2020|False           |False
+name              |email                 |courseCode  |firstRegistrationMail|lastRegistrationMail|collectMail|
+------------------|----------------------|------------|---------------------|--------------------|-----------|
+Jakob Lindskog    |jaklin16@student.hh.se|MA2020      |False                |False               |False      |
+Jakob Lindskog    |jaklin16@student.hh.se|FÖ1002      |True                 |False               |False      |
+Andreas Häggström |andhag16@student.hh.se|MA2020      |False                |False               |False      |
 
 which allows easier translation to pandas dataframes than a hierarchical JSON.
