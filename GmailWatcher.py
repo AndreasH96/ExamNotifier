@@ -11,7 +11,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from lib.Dataframes import timeedit_df
 import pandas as pd
-
+from lib.Mail import Mail
 #from Dataframes import timeedit_df
 
 SCOPES = [
@@ -29,8 +29,13 @@ class GmailWatcher:
         
         self.allowedUsersEmailsPD = pd.read_csv("allowedUsers.csv")
         self.ownerEmails = (pd.read_csv("owners.csv")).userid.to_list()
+        self.statusFunctions = {"NOT STUDENT":self.notStudent, "STATUS":self.studentStatus, 
+                "DELETE":self.deleteStudent,"INCORRECT":self.incorrectMail,
+                "NEWUSERS":self.appendPersonsToAllowedList,"REMOVEUSERS":self.removePersonsFromAllowedList,
+                "OK":self.appendNotification}
         self.authorizeToGMailAPI()
         self.readInbox()
+        
 
     def authorizeToGMailAPI(self):
         """
@@ -98,27 +103,9 @@ class GmailWatcher:
                 ).execute()
 
             # Perform the desired action, show by the status parameter
-            if status == "NOT STUDENT":
-                self.notStudent(emailData)
-
-            elif status == "STATUS":
-                self.studentStatus(emailData)
-
-            elif status == "DELETE":
-                self.deleteStudent(emailData)
-
-            elif status == "NO COURSECODES":
-                self.incorrectMail(emailData)
-            elif status == "NEWUSERS":
-                self.appendPersonsToAllowedList(emailData["users"])
+            self.statusFunctions[status](emailData)
             
-            elif status == "REMOVEUSERS":
-                self.removePersonsFromAllowedList(emailData["users"])
-
-            elif status == "NORMAL":
-                print(emailData)
-                self.appendNotification(emailData)
-
+            
     def extractEmailData(self, receivedEmail):
         """
             Extracts the content of email and return the data.
@@ -151,18 +138,13 @@ class GmailWatcher:
         try:
             # If person has åäö in name, they will have quotations around their name
             # Therefore needs more advanced regex
+            #senderName = re.findall(r'(\w.+?)"?\s<', senderHeader)[0][0]
             senderName = re.findall(r'(\w(.+?))((?="\s<)|(?=\s<))', senderHeader)[0][0]
-            # senderName = re.findall(r'"(.+?)"', senderHeader)[0]
-        except:
-            senderName = "Error"
-        try:
             senderEmail = re.findall(r"<(.+?)>", senderHeader)[0]
-        except:
-            senderEmail = "Error"
-        try:
             senderEmailDomain = re.findall(r"[^@]*$", senderEmail)[0]
         except:
-            senderEmailDomain = "Error"
+            return "INCORRECT", {"error": "incorrect email header: {}".format(senderHeader)}
+        
 
         # Checks so that the person who sends an email is a student at Halmstad University
         # If not student, return error message
@@ -170,16 +152,16 @@ class GmailWatcher:
             return "NOT STUDENT", {"name": senderName, "email": senderEmail}
 
         # Get current date and time to store when email was recieved
-        todaysTime = datetime.today()
-        timeReceived = pd.to_datetime("{} {}:{}".format(
-            todaysTime.date(), todaysTime.hour, todaysTime.minute
-        ))
+        timeReceived = datetime.today().date()
+        #timeReceived = pd.to_datetime("{} {}:{}".format(
+        #    todaysTime.date(), todaysTime.hour, todaysTime.minute
+        #
 
         # Only need the first rows, can therefore use ["snippet"] instead of getting the whole message
         # Snippet will have the content separated by spaces
         # Filtering out empy indices if there are any
         emailContent = list(filter(None, receivedEmail["snippet"].split(" ")))
-
+    
         # If user sends course code in subject, append it to the email content
         subjectCourseCodes = re.findall(r"\D{2}\d{4}", emailSubject)
         emailContent.extend(subjectCourseCodes)
@@ -189,24 +171,24 @@ class GmailWatcher:
             adminCommand = emailSubject.replace(" ","").lower()
             # Check if Admin wishes to add new users
             if adminCommand in ["newusers","newstudents","newuser","newstudent"]:
-                return "NEWUSERS", {"users":emailContent}
+                return "NEWUSERS", {"email":senderEmail,"users":emailContent}
+
             elif adminCommand in ["removeusers","removestudents","removeuser","removestudent"]:
-                return "REMOVEUSERS", {"users": emailContent }
+                return "REMOVEUSERS", {"email":senderEmail,"users": emailContent }
 
-        # Check if the student wishes to recieve a status
-        if emailContent[0].lower() == "status":
-            return "STATUS", {"name": senderName, "email": senderEmail}
+        commands= ["status","delete"]
+        
+        for command in commands :
+            if command in [line.lower() for line in emailContent] or emailSubject.lower() == command:
+                return command.upper(), {"name": senderName, "email": senderEmail}
 
-        # Check if the student wishes to be deleted from the database
-        elif emailContent[0].lower() == "delete":
-            return "DELETE", {"name": senderName, "email": senderEmail}
 
         emailData = []
         time_df = timeedit_df()
 
         def calcExamWriteDate(mailTime, courseCode):
             # take the date of the exam that is closest in time
-            time_df["diff"] = abs(mailTime - time_df[time_df.courseCode == courseCode].examWriteDate)
+            time_df["diff"] = abs(mailTime - time_df[time_df.courseCode == courseCode].examWriteDate.dt.date)
             tmp = time_df.sort_values("diff", ascending=True).examWriteDate.reset_index(
                 drop=True
             )
@@ -218,8 +200,6 @@ class GmailWatcher:
 
             return None
         
-        
-
         for courseCode in emailContent:
             # Iterate through the lines of the email
             # Checking so the input is correct with 2 Letters followed by 4 digits
@@ -228,33 +208,36 @@ class GmailWatcher:
             if len(re.findall(r"\D{2}\d{4}", courseCode)) != 0:
                 examWriteDate = calcExamWriteDate(timeReceived, courseCode)
                 if not examWriteDate:
-                    print('ERR: Course courseCode "{}" not found'.format(courseCode))
-                    continue
-
+                    return "INCORRECT", {"error": "Course courseCode '{}' not found".format(courseCode)}
+                    
                 emailDataLine = {
                     "name": senderName,
                     "email": senderEmail,
+                    "examWriteDate": examWriteDate,
                     "courseCode": courseCode.upper(),
-                    "registrationMail": False,
-                    "collectMail": False,
                     "mailTime": timeReceived,
-                    "examWriteDate": examWriteDate
+                    "firstRegistrationMail": False,
+                    "lastRegistrationMail": False,
+                    "collectMail": False
                 }
 
                 emailData.append(emailDataLine)
 
             if len(emailData) == 0:
-                return "NO COURSECODES", {"name": senderName, "email": senderEmail}
+                return "INCORRECT", {"error": "No coursecodes"}
 
-        return "NORMAL", emailData
+        return "OK", emailData
 
-    def appendPersonsToAllowedList(self,newUsers):
+    def appendPersonsToAllowedList(self,emailData):
         """
             Appends the list of users to allowedUsers.csv
 
             Input: List of user emails to allow
 
+            TODO: SEND EMAIL TO ADMIN
+
         """
+        newUsers = emailData["users"]
         usersAdded = []
         for newuser in newUsers:
             if not (self.allowedUsersEmailsPD.isin([newuser]).any()).to_list()[0]:
@@ -262,25 +245,39 @@ class GmailWatcher:
                 usersAdded.append(newuser)
                 
         self.allowedUsersEmailsPD.to_csv("allowedUsers.csv", index=False)
+        
+        if len(usersAdded) > 0:
+            mailText = "Successfully added {} to allowedUsers.csv".format(usersAdded)
 
-    def removePersonsFromAllowedList(self, userEmailList):
+            self.infoMailAdmin(receiver = emailData["email"], mailText = mailText)
+
+
+
+    def removePersonsFromAllowedList(self, emailData):
         """
             Removes the users in the list from allowedUsers.csv
 
             Input: List of user emails to remove
+
         """
+        userEmailList = emailData["users"]
+        usersRemoved = []
         for userEmail in userEmailList:
             if userEmail not in self.ownerEmails:
                 # Get index of user
                 result = self.allowedUsersEmailsPD.index[self.allowedUsersEmailsPD.email == userEmail].tolist()
-                if len(result) != 0:
+                if len(result) > 0:
                     index = result[0]
                     # Remove user if in allowed users
-                    self.allowedUsersEmailsPD = self.allowedUsersEmailsPD.drop([index])
-                
+                    self.allowedUsersEmailsPD = self.allowedUsersEmailsPD.drop([index]) 
+                    usersRemoved.append(userEmail)
 
-                    
         self.allowedUsersEmailsPD.to_csv("allowedUsers.csv", index=False)
+
+        if len(usersRemoved) > 0:
+            mailText = "Successfully removed {} to allowedUsers.csv".format(usersRemoved)
+
+            self.infoMailAdmin(receiver = emailData["email"], mailText = mailText)
 
     def appendNotification(self, emailData):
         """
@@ -288,16 +285,22 @@ class GmailWatcher:
 
             Input: Email data extracted by extractEmailData()
 
-            TODO: implement the appending of notification
         """
-        state = pd.DataFrame()
-        
-        for subscription in emailData:
+        #print(pd.DataFrame(emailData))
+        newDF = pd.DataFrame(emailData)
+        state = pd.read_csv("lib/state.csv")
+        print(newDF)
+        print(state)
+
+        newState = pd.concat([state,newDF]).reset_index(drop=True).drop_duplicates(ignore_index=True)
+        newState.to_csv("lib/state.csv",index=False)
+        """ for subscription in emailData:
             state = state.append(subscription,ignore_index =True)
         
-        #state.to_csv("lib/state.csv",'a',index=False)
+        #state.to_csv("lib/state.csv",index=False)
+        t = pd.read_csv("lib/state.csv") """
         
-
+        
     def studentStatus(self, senderNameAndEmail):
         """
             TODO: implement sending the student the status
@@ -320,8 +323,15 @@ class GmailWatcher:
         """
             TODO: implement responding(?) to the student
         """
+
         print("INCORRECT MAIL")
 
+
+    def infoMailAdmin(self,mailText,receiver = None):
+        if receiver == None:
+            receiver = self.ownerEmails[0]
+        mail = Mail(receiver,mailText)
+        mail._send()
 
 gmailWatcher = GmailWatcher(markAsRead=False)
 
