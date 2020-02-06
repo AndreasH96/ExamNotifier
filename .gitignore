@@ -2,8 +2,8 @@ lib/credentials.json
 credentials.json
 __pycache__
 data/
-state.csv
-state-backup.csv
+lib/state.csv
+lib/state-backup.csv
 .ipynb_checkpoints
 jupyter/
 *.ipynb
