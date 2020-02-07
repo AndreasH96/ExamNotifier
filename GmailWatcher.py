@@ -13,8 +13,6 @@ from lib.Dataframes import timeedit_df
 import pandas as pd
 from lib.Mail import Mail
 
-# from Dataframes import timeedit_df
-
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",
@@ -143,10 +141,17 @@ class GmailWatcher:
         try:
             # If person has åäö in name, they will have quotations around their name
             # Therefore needs more advanced regex
-            # senderName = re.findall(r'(\w.+?)"?\s<', senderHeader)[0][0]
-            senderName = re.findall(r'(\w(.+?))((?="\s<)|(?=\s<))', senderHeader)[0][0]
-            senderEmail = re.findall(r"<(.+?)>", senderHeader)[0]
-            senderEmailDomain = re.findall(r"[^@]*$", senderEmail)[0]
+
+            # Jackiboys lösning
+            parts = senderHeader.split("<")
+            stripThings = ' "<>'
+            senderName = parts[0].strip(stripThings)
+            senderEmail = parts[1].strip(stripThings)
+            senderEmailDomain = senderEmail.split("@")[1]
+
+            # senderName = re.findall(r'(\w(.+?))((?="\s<)|(?=\s<))', senderHeader)[0][0]
+            # senderEmail = re.findall(r"<(.+?)>", senderHeader)[0]
+            # senderEmailDomain = re.findall(r"[^@]*$", senderEmail)[0]
         except Exception as e:
             errMsg = "incorrect email header: '{}'\n\n{}".format(senderHeader, e)
             return "INCORRECT", {"error": errMsg}
@@ -158,9 +163,6 @@ class GmailWatcher:
 
         # Get current date and time to store when email was recieved
         timeReceived = datetime.today().date()
-        # timeReceived = pd.to_datetime("{} {}:{}".format(
-        #    todaysTime.date(), todaysTime.hour, todaysTime.minute
-        #
 
         # Only need the first rows, can therefore use ["snippet"] instead of getting the whole message
         # Snippet will have the content separated by spaces
@@ -365,17 +367,18 @@ class GmailWatcher:
         state[~mask].to_csv("lib/state.csv", index=False)
 
     def notStudent(self, senderNameAndEmail):
-        """
-            TODO: implement responding to student if we want to do that
-        """
-        print("NOT STUDENT")
+        print("NOT STUDENT '{}'".format(senderNameAndEmail["email"]))
 
-    def incorrectMail(self, senderNameAndEmail):
-        """
-            TODO: implement responding(?) to the student
-        """
+        msg = "Hi! Your mail was not sent from the domain {}. This service exists solely for the".format(
+            HHSTUDENTMAILDOMAIN
+        )
+        mail = Mail(senderNameAndEmail["email"], msg)
+        mail._send()
 
-        print("INCORRECT MAIL")
+    def incorrectMail(self, errDict):
+        # don't respond to student about a server error
+        msg = "INTERNAL SERVER ERROR '{}'".format(errDict["error"])
+        print(msg)
 
     def infoMailAdmin(self, mailText, receiver=None):
         if receiver == None:

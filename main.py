@@ -6,9 +6,13 @@ from lib.CollectBot import CollectBot
 
 """
 Should be runned periodically, ideally once a day.
-Sends out all mails that should be sent.
+Sends out mails about:
+
+    - Registration for the first time
+    - Registration for the last day
+    - You can now collect your exam
 """
 
-LastRegistrationBot().sendMails()
 FirstRegistrationBot().sendMails()
+LastRegistrationBot().sendMails()
 CollectBot().sendMails()
